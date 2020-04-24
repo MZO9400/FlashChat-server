@@ -1,0 +1,26 @@
+{
+  "name": "smim",
+  "version": "0.0.1",
+  "description": "Social Media IM is a semester project to include IM and Databases to store user info and posts on user's profile",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "node",
+    "socket",
+    "socketio",
+    "dbms",
+    "mongo",
+    "express",
+    "mongodb",
+    "mongoose",
+    "react"
+  ],
+  "author": "Muhammad Hamza",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0"
+  }
+}
