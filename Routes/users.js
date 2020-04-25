@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const keys = require("../Mongo/Database");
 const User = require("../Mongo/Models/Users");
+const authorize = require('../Auth/JWTAuth');
 
 
 router.post("/register", (req, res) => {
@@ -64,5 +65,13 @@ router.post("/login", (req, res) => {
         });
     });
 });
+
+router.post("/getInfo", authorize, (req, res) => {
+    User.findOne({"_id": req.body.uid}, {"_id": 0, name: 1, email: 1, date: 1}).then(rsp => {
+        return res.status(200).json(rsp);
+    }).catch(e => {
+        res.status(401).json(e);
+    })
+})
 
 module.exports = router;
