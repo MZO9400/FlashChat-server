@@ -79,6 +79,13 @@ router.post("/getInfo", authorize, (req, res) => {
         res.status(401).json(e);
     })
 })
+router.post("/getInfoPub", (req, res) => {
+    User.findOne({"_id": req.body.uid}, {"_id": 1, name: 1}).then(rsp => {
+        return res.status(200).json(rsp);
+    }).catch(e => {
+        res.status(401).json(e);
+    })
+})
 
 router.post("/setInfo", authorize, (req, res) => {
     let token = (req.headers['x-access-token'] || req.headers['authorization']);
