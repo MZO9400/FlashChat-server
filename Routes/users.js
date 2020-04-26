@@ -107,8 +107,7 @@ router.post("/setInfo", authorize, (req, res) => {
                                 });
                         });
                     });
-                }
-                else {
+                } else {
                     User.updateOne({"_id": id}, updatedData).then(response => {
                         return res.status(200).json(response);
                     })
@@ -116,8 +115,7 @@ router.post("/setInfo", authorize, (req, res) => {
                             return res.status(409).json({error: "Could not update data", e})
                         });
                 }
-            }
-            else {
+            } else {
                 return res.status(401).json({error: "Password mismatch"});
             }
         })
