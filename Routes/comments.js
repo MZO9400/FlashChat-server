@@ -65,7 +65,7 @@ router.post("/toggleVisibility", authorize, (req, res) => {
 })
 
 router.post("/getAll", (req, res) => {
-    Comments.find({toID: req.body.userID })
+    Comments.find({toID: req.body.userID})
         .then(response => {
             res.status(200).json(response);
         })
