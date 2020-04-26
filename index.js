@@ -21,15 +21,9 @@ app.use(cors())
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 app.use(passport.initialize());
-
-
 require("./auth/passport")(passport);
 
 app.use("/api/users", users);
-
-app.get('/', function (req, res) {
-    res.send('reached dead endpoint');
-});
 
 
 const PORT = process.env.PORT || 8000;
