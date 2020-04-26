@@ -4,6 +4,7 @@ const bodyParser = require("body-parser");
 const passport = require("passport");
 const config = require("./Mongo/Database")
 const users = require("./Routes/users");
+const comments = require("./Routes/comments")
 const cors = require('cors')
 
 mongoose.connect(config.DB, {useNewUrlParser: true, useUnifiedTopology: true}).then(
@@ -24,6 +25,7 @@ app.use(passport.initialize());
 require("./auth/passport")(passport);
 
 app.use("/api/users", users);
+app.use("/api/comments", comments);
 
 
 const PORT = process.env.PORT || 8000;
