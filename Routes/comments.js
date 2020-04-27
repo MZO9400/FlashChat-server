@@ -50,7 +50,7 @@ router.post("/toggleVisibility", authorize, (req, res) => {
                     error: "You can only toggle visibility on comments that are on your profile"
                 })
                 comment.hidden = !comment.hidden;
-                comment.updateOne()
+                comment.save()
                     .then(rsp => {
                         return res.status(200).json(rsp)
                     })
@@ -139,5 +139,37 @@ router.post("/edit", authorize, (req, res) => {
             return res.status(200).json(rsp);
         })
 })
-
+router.post("/getPublic", (req, res) => {
+    const id = req.body.id;
+    Comments.aggregate([
+        {
+            '$match': {
+                'toID': id,
+                hidden: false
+            }
+        }, {
+            '$lookup': {
+                'from': 'users',
+                'localField': 'fromID',
+                'foreignField': '_id',
+                'as': 'userInfo'
+            }
+        }, {
+            '$unwind': {
+                'path': '$userInfo'
+            }
+        }, {
+            '$addFields': {
+                'name': '$userInfo.name'
+            }
+        }, {
+            '$project': {
+                '__v': 0,
+                'userInfo': 0
+            }
+        }
+    ])
+        .then(rsp => res.status(200).json(rsp))
+        .catch(e => res.status(500).json({error: "Could not fetch public comments", stack: e}))
+})
 module.exports = router;
