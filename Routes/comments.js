@@ -50,7 +50,7 @@ router.post("/toggleVisibility", authorize, (req, res) => {
                     error: "You can only toggle visibility on comments that are on your profile"
                 })
                 comment.hidden = !comment.hidden;
-                comment.update()
+                comment.updateOne()
                     .then(rsp => {
                         return res.status(200).json(rsp)
                     })
@@ -65,12 +65,41 @@ router.post("/toggleVisibility", authorize, (req, res) => {
 })
 
 router.post("/getAll", (req, res) => {
-    Comments.find({toID: req.body.userID})
+    Comments.aggregate([
+        {
+            '$match': {
+                'fromID': req.body.userID
+            }
+        }, {
+            '$lookup': {
+                'from': 'users',
+                'localField': 'fromID',
+                'foreignField': '_id',
+                'as': 'userInfo'
+            }
+        }, {
+            '$unwind': {
+                'path': '$userInfo'
+            }
+        }, {
+            '$addFields': {
+                'name': '$userInfo.name'
+            }
+        }, {
+            '$project': {
+                '__v': 0,
+                'userInfo': 0
+            }
+        }
+    ])
         .then(response => {
             res.status(200).json(response);
         })
         .catch(er => {
-            return res.status(404).json({error: "No comments found on this profile", stack: er})
+            return res.status(500).json({
+                error: "Could not fetch comments for " + req.body.userID + " at this time",
+                stack: er
+            })
         })
 })
 
