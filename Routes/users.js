@@ -180,4 +180,45 @@ router.post("/getFriendshipStatus", authorize, async (req, res) => {
     }
 })
 
+router.post("/populateWall", authorize, (req, res) => {
+    User.aggregate([
+        {
+            '$lookup': {
+                'from': 'comments',
+                'localField': 'friends',
+                'foreignField': 'fromID',
+                'as': 'posts'
+            }
+        }, {
+            '$project': {
+                'posts': 1,
+                '_id': 0
+            }
+        }, {
+            '$unwind': {
+                'path': '$posts'
+            }
+        }, {
+            '$skip': req.body.page * req.body.limit
+        }, {
+            '$limit': req.body.limit
+        }, {
+            '$group': {
+                '_id': null,
+                'posts': {
+                    '$push': '$posts'
+                }
+            }
+        }, {
+            '$project': {
+                '_id': 0
+            }
+        }
+    ])
+        .then(resp => {
+            console.log(resp);
+            res.status(200).json(Boolean(resp.length) ? resp[0] : [{posts: []}])
+        })
+        .catch(err => res.status(500).json({error: "Couldn't fetch posts", stack: err}))
+})
 module.exports = router;
