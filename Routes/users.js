@@ -215,10 +215,7 @@ router.post("/populateWall", authorize, (req, res) => {
             }
         }
     ])
-        .then(resp => {
-            console.log(resp);
-            res.status(200).json(Boolean(resp.length) ? resp[0] : [{posts: []}])
-        })
+        .then(resp => res.status(200).json(Boolean(resp.length) ? resp[0] : [{posts: []}]))
         .catch(err => res.status(500).json({error: "Couldn't fetch posts", stack: err}))
 })
 module.exports = router;
