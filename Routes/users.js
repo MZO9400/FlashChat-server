@@ -89,6 +89,8 @@ router.post("/getInfoPub", (req, res) => {
 
 router.post("/setInfo", authorize, (req, res) => {
     let token = (req.headers['x-access-token'] || req.headers['authorization']);
+    if (!token)
+        return res.status(401).json({error: "Please log in again to update this comment"});
     token = token.slice(7, token.length);
     const decoded = decode(token);
     const id = decoded.id;
@@ -128,6 +130,54 @@ router.post("/setInfo", authorize, (req, res) => {
         })
     })
 })
+router.post("/toggleFriend", authorize, async (req, res) => {
+    let token = (req.headers['x-access-token'] || req.headers['authorization']);
+    if (!token)
+        return res.status(401).json({error: "Session terminated. Please log in again"});
+    token = token.slice(7, token.length);
+    const decoded = decode(token);
 
+    if (decoded.id === req.body._id) {
+        return res.status(403).json({error: "You cannot add yourself"})
+    }
+    try {
+        const sender = await User.findOne({_id: decoded.id}).exec();
+        let friendIndex = sender.friends.indexOf(req.body._id);
+        if (friendIndex === -1) {
+            sender.friends.push(req.body._id);
+            sender.save();
+        } else {
+            sender.friends.splice(friendIndex, 1);
+            sender.save();
+        }
+        res.status(200).json({friendStatus: friendIndex === -1 ? "Sent request" : "Removed friend"})
+    } catch (e) {
+        res.status(500).json({error: "Internal server error", stack: e})
+    }
+
+})
+router.post("/getFriendshipStatus", authorize, async (req, res) => {
+    let token = (req.headers['x-access-token'] || req.headers['authorization']);
+    if (!token)
+        return res.status(401).json({error: "Session terminated. Please log in again"});
+    token = token.slice(7, token.length);
+    const decoded = decode(token);
+    try {
+        const checker = await User.findOne({_id: decoded.id}).exec();
+        const checked = await User.findOne({_id: req.body.id}).exec();
+        let friendshipStatus = "none";
+        const checkedUserInCheckersList = checker.friends.indexOf(checked._id) !== -1;
+        const checkerInCheckedUsersList = checked.friends.indexOf(checker._id) !== -1;
+        if (checkedUserInCheckersList) {
+            friendshipStatus = "pending";
+        }
+        if (checkedUserInCheckersList && checkerInCheckedUsersList) {
+            friendshipStatus = "friends";
+        }
+        return res.status(200).json({friendshipStatus})
+    } catch (e) {
+        res.status(500).json({error: "Internal server error", stack: e})
+    }
+})
 
 module.exports = router;
