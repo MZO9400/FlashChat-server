@@ -181,6 +181,8 @@ router.post("/getFriendshipStatus", authorize, async (req, res) => {
 })
 
 router.post("/populateWall", authorize, (req, res) => {
+    if (!(req.headers['x-access-token'] || req.headers['authorization']))
+        return res.status(401).json({error: "Session terminated. Please log in again"});
     User.aggregate([
         {
             '$lookup': {
@@ -199,9 +201,43 @@ router.post("/populateWall", authorize, (req, res) => {
                 'path': '$posts'
             }
         }, {
+            '$match': {
+                'posts.hidden': false
+            }
+        }, {
             '$skip': req.body.page * req.body.limit
         }, {
             '$limit': req.body.limit
+        }, {
+            '$lookup': {
+                'from': 'users',
+                'localField': 'posts.fromID',
+                'foreignField': '_id',
+                'as': 'fromName'
+            }
+        }, {
+            '$unwind': {
+                'path': '$fromName'
+            }
+        }, {
+            '$addFields': {
+                'posts.fromName': '$fromName.name'
+            }
+        }, {
+            '$lookup': {
+                'from': 'users',
+                'localField': 'posts.toID',
+                'foreignField': '_id',
+                'as': 'toName'
+            }
+        }, {
+            '$unwind': {
+                'path': '$toName'
+            }
+        }, {
+            '$addFields': {
+                'posts.toName': '$toName.name'
+            }
         }, {
             '$group': {
                 '_id': null,
@@ -215,7 +251,7 @@ router.post("/populateWall", authorize, (req, res) => {
             }
         }
     ])
-        .then(resp => res.status(200).json(Boolean(resp.length) ? resp[0] : [{posts: []}]))
+        .then(resp => res.status(200).json(Boolean(resp.length) ? resp[0] : {posts: []}))
         .catch(err => res.status(500).json({error: "Couldn't fetch posts", stack: err}))
 })
 module.exports = router;
