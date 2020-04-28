@@ -4,6 +4,7 @@ const Comments = require("../Mongo/Models/Comments");
 const Users = require("../Mongo/Models/Users");
 const authorize = require('../Auth/JWTAuth');
 const decode = require('jwt-decode');
+const ObjectId = require('mongoose').Types.ObjectId;
 
 router.post("/postNew", authorize, (req, res) => {
     let token = (req.headers['x-access-token'] || req.headers['authorization']);
@@ -68,7 +69,7 @@ router.post("/getAll", (req, res) => {
     Comments.aggregate([
         {
             '$match': {
-                'fromID': req.body.userID
+                'toID': req.body.userID
             }
         }, {
             '$lookup': {
@@ -90,6 +91,11 @@ router.post("/getAll", (req, res) => {
                 '__v': 0,
                 'userInfo': 0
             }
+        },
+        {
+            '$sort': {
+                'date': -1
+            }
         }
     ])
         .then(response => {
@@ -110,10 +116,29 @@ router.post("/delete", authorize, (req, res) => {
     token = token.slice(7, token.length);
     const decoded = decode(token);
     const {id} = decoded;
-    Comments.deleteOne({_id: req.body._id, toID: id})
-        .then(response => {
-            return res.status(200).json(response);
-        })
+    Comments.aggregate([
+        {
+            '$match': {
+                '_id': {
+                    '$eq': new ObjectId(req.body._id)
+                },
+                '$or': [
+                    {
+                        'fromID': {
+                            '$eq': id
+                        }
+                    }, {
+                        'toID': {
+                            '$eq': id
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+        .then(response =>
+            Comments.deleteOne({_id: response[0]._id})
+                .then(() => res.status(200).json(response)))
         .catch(er => {
             return res.status(500).json({error: "Could not remove comment", stack: er})
         })
@@ -165,7 +190,13 @@ router.post("/getPublic", (req, res) => {
         }, {
             '$project': {
                 '__v': 0,
-                'userInfo': 0
+                'userInfo': 0,
+                'hidden': 0
+            }
+        },
+        {
+            '$sort': {
+                'date': -1
             }
         }
     ])
