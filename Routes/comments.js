@@ -203,4 +203,6 @@ router.post("/getPublic", (req, res) => {
         .then(rsp => res.status(200).json(rsp))
         .catch(e => res.status(500).json({error: "Could not fetch public comments", stack: e}))
 })
+
+
 module.exports = router;
