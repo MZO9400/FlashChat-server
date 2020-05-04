@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const config = require('../Mongo/Database');
 const authorize = (req, res, next) => {
     let token = req.headers['x-access-token'] || req.headers['authorization'];
     if (!token) {
@@ -11,7 +10,7 @@ const authorize = (req, res, next) => {
     if (token.startsWith('Bearer ')) {
         token = token.slice(7, token.length);
     }
-    jwt.verify(token, config.secretOrKey, (err, decoded) => {
+    jwt.verify(token, process.env.secretOrKey, (err, decoded) => {
         if (err) {
             return res.status(401).json({
                 success: false,

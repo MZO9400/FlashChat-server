@@ -2,13 +2,12 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const passport = require("passport");
-const config = require("./Mongo/Database")
 const users = require("./Routes/users");
 const comments = require("./Routes/comments")
 const cors = require('cors')
 require('dotenv').config();
 
-mongoose.connect(config.DB, {useNewUrlParser: true, useUnifiedTopology: true}).then(
+mongoose.connect(process.env.MONGODB_URI, {useNewUrlParser: true, useUnifiedTopology: true}).then(
     () => {
         console.log('Database is connected')
     },

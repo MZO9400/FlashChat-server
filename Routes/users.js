@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const keys = require("../Mongo/Database");
 const User = require("../Mongo/Models/Users");
 const authorize = require('../Auth/JWTAuth');
 const decode = require('jwt-decode');
@@ -116,7 +115,7 @@ router.post("/login", (req, res) => {
                 };
                 jwt.sign(
                     payload,
-                    keys.secretOrKey,
+                    process.env.secretOrKey,
                     {
                         expiresIn: 3600
                     },
