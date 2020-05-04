@@ -6,6 +6,70 @@ const keys = require("../Mongo/Database");
 const User = require("../Mongo/Models/Users");
 const authorize = require('../Auth/JWTAuth');
 const decode = require('jwt-decode');
+const {BlobServiceClient} = require('@azure/storage-blob');
+const formParser = require('multer')();
+
+const streamBuf = readable => {
+    return new Promise((res, rej) => {
+        const chunkArr = [];
+        readable.on('data', data => chunkArr.push(data));
+        readable.on('end', () => res(chunkArr.join("")));
+        readable.on('error', () => rej);
+    })
+}
+
+router.post("/image", async (req, res) => {
+    if (!req.body.uid) {
+        return res.status(400).json({error: "Please provide a valid user id (uid)"});
+    }
+    const blob = await BlobServiceClient.fromConnectionString(process.env.AZURE_BLOBSTORAGE_CONNECTION_STRING)
+        .getContainerClient('avatars')
+        .getBlobClient(req.body.uid);
+    try {
+        const resp = await blob.download(0);
+        const image = await streamBuf(resp.readableStreamBody);
+        return res.status(200).send(image);
+    } catch (e) {
+        return res.status(404).json({error: "No avatar"})
+    }
+})
+
+router.delete("/image", authorize, async (req, res) => {
+    let token = (req.headers['x-access-token'] || req.headers['authorization']);
+    if (!token)
+        return res.status(401).json({error: "Session terminated. Please log in again"});
+    token = token.slice(7, token.length);
+    const {id} = decode(token);
+    const blob = await BlobServiceClient.fromConnectionString(process.env.AZURE_BLOBSTORAGE_CONNECTION_STRING)
+        .getContainerClient('avatars')
+        .getBlobClient(id);
+    blob.delete()
+        .then(() => res.sendStatus(200))
+        .catch(() => res.status(500).json({error: "Something went wrong"}));
+})
+
+router.put("/image", formParser.single('image'), authorize, async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({error: "Please upload an image"});
+    }
+    if (req.file.size > 204800) {
+        return res.status(413).json({error: "Maximum file size is 200KB"})
+    }
+    let token = (req.headers['x-access-token'] || req.headers['authorization']);
+    if (!token)
+        return res.status(401).json({error: "Session terminated. Please log in again"});
+    token = token.slice(7, token.length);
+    const {id} = decode(token);
+    const blob = await BlobServiceClient.fromConnectionString(process.env.AZURE_BLOBSTORAGE_CONNECTION_STRING)
+        .getContainerClient('avatars')
+        .getBlockBlobClient(id);
+    blob.upload(req.file.buffer, req.file.size)
+        .then(() => {
+            res.sendStatus(200);
+        })
+        .catch(() => res.status(500).json({error: "Something went wrong"}));
+
+})
 
 router.post("/register", (req, res) => {
     User.findOne({email: req.body.email}).then(user => {

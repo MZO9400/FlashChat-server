@@ -6,6 +6,7 @@ const config = require("./Mongo/Database")
 const users = require("./Routes/users");
 const comments = require("./Routes/comments")
 const cors = require('cors')
+require('dotenv').config();
 
 mongoose.connect(config.DB, {useNewUrlParser: true, useUnifiedTopology: true}).then(
     () => {
