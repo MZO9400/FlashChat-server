@@ -12,11 +12,10 @@ const streamBuf = readable => {
     return new Promise((res, rej) => {
         const chunkArr = [];
         readable.on('data', data => chunkArr.push(data));
-        readable.on('end', () => res(chunkArr.join("")));
+        readable.on('end', () => res(Buffer.concat(chunkArr)));
         readable.on('error', () => rej);
     })
 }
-
 router.post("/image", async (req, res) => {
     if (!req.body.uid) {
         return res.status(400).json({error: "Please provide a valid user id (uid)"});
@@ -24,12 +23,13 @@ router.post("/image", async (req, res) => {
     const blob = await BlobServiceClient.fromConnectionString(process.env.AZURE_BLOBSTORAGE_CONNECTION_STRING)
         .getContainerClient('avatars')
         .getBlobClient(req.body.uid);
+    const {mimetype} = (await blob.getProperties()).metadata;
     try {
         const resp = await blob.download(0);
         const image = await streamBuf(resp.readableStreamBody);
-        return res.status(200).send(image);
+        return res.status(200).json({image: image.toString('base64'), mimetype});
     } catch (e) {
-        return res.status(404).json({error: "No avatar"})
+        return res.status(200).json({error: "No avatar"})
     }
 })
 
@@ -64,10 +64,10 @@ router.put("/image", formParser.single('image'), authorize, async (req, res) => 
         .getBlockBlobClient(id);
     blob.upload(req.file.buffer, req.file.size)
         .then(() => {
-            res.sendStatus(200);
+            blob.setMetadata({mimetype: req.file.mimetype})
+                .then(() => res.sendStatus(200));
         })
-        .catch(() => res.status(500).json({error: "Something went wrong"}));
-
+        .catch((e) => res.status(500).json({error: "Something went wrong", stack: e}));
 })
 
 router.post("/register", (req, res) => {
