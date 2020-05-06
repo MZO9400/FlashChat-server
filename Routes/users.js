@@ -8,6 +8,20 @@ const decode = require('jwt-decode');
 const {BlobServiceClient} = require('@azure/storage-blob');
 const formParser = require('multer')();
 
+
+const getImage = async id => {
+    try {
+        const blob = await BlobServiceClient.fromConnectionString(process.env.AZURE_BLOBSTORAGE_CONNECTION_STRING)
+            .getContainerClient('avatars')
+            .getBlobClient(id);
+        const {mimetype} = (await blob.getProperties()).metadata;
+        const resp = await blob.download(0);
+        const image = await streamBuf(resp.readableStreamBody);
+        return {image: image.toString('base64'), mimetype}
+    } catch (e) {
+        return {error: "No avatar"};
+    }
+}
 const streamBuf = readable => {
     return new Promise((res, rej) => {
         const chunkArr = [];
@@ -20,17 +34,7 @@ router.post("/image", async (req, res) => {
     if (!req.body.uid) {
         return res.status(400).json({error: "Please provide a valid user id (uid)"});
     }
-    const blob = await BlobServiceClient.fromConnectionString(process.env.AZURE_BLOBSTORAGE_CONNECTION_STRING)
-        .getContainerClient('avatars')
-        .getBlobClient(req.body.uid);
-    const {mimetype} = (await blob.getProperties()).metadata;
-    try {
-        const resp = await blob.download(0);
-        const image = await streamBuf(resp.readableStreamBody);
-        return res.status(200).json({image: image.toString('base64'), mimetype});
-    } catch (e) {
-        return res.status(200).json({error: "No avatar"})
-    }
+    return res.status(200).json(await getImage(req.body.uid));
 })
 
 router.delete("/image", authorize, async (req, res) => {
@@ -327,14 +331,20 @@ router.post("/search", async (req, res) => {
         ...await User.find({"_id": {$regex: `.*${req.body.search}.*`}}, {name: 1})
     ]
     let uniqueNames = [];
-    people.filter(item => {
+    people.filter(async item => {
         let i = uniqueNames.findIndex(x => x._id === item._id);
         if (i <= -1) {
             uniqueNames.push(item);
         }
         return null;
     });
-    return res.status(200).json({result: uniqueNames});
+    const promises = uniqueNames.map(async value => {
+        let custom = JSON.parse(JSON.stringify(value));
+        custom.avatar = await getImage(value._id);
+        return custom;
+    })
+    Promise.all(promises)
+        .then(result => res.status(200).json({result: result}))
 })
 
 module.exports = router;
