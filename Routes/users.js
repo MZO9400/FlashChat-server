@@ -317,4 +317,24 @@ router.post("/populateWall", authorize, (req, res) => {
         .then(resp => res.status(200).json(Boolean(resp.length) ? resp[0] : {posts: []}))
         .catch(err => res.status(500).json({error: "Couldn't fetch posts", stack: err}))
 })
+
+router.post("/search", async (req, res) => {
+    if (!req.body.search) {
+        return res.status(403).json({error: "Please enter a valid search query"})
+    }
+    const people = [
+        ...await User.find({"name": {$regex: `.*${req.body.search}.*`}}, {name: 1}),
+        ...await User.find({"_id": {$regex: `.*${req.body.search}.*`}}, {name: 1})
+    ]
+    let uniqueNames = [];
+    people.filter(item => {
+        let i = uniqueNames.findIndex(x => x._id === item._id);
+        if (i <= -1) {
+            uniqueNames.push(item);
+        }
+        return null;
+    });
+    return res.status(200).json({result: uniqueNames});
+})
+
 module.exports = router;
