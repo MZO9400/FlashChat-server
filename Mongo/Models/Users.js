@@ -19,10 +19,6 @@ const UserSchema = new Schema({
         type: String,
         required: true
     },
-    avatar: {
-        type: String,
-        required: false
-    },
     dateOfBirth: {
         type: Date,
         required: false
