@@ -3,12 +3,16 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../Mongo/Models/Users");
+const Chat = require("../Mongo/Models/Chat");
 const authorize = require('../Auth/JWTAuth');
 const decode = require('jwt-decode');
 const {BlobServiceClient} = require('@azure/storage-blob');
 const formParser = require('multer')();
 
-
+const removeChatID = async (toID, fromID) => [Chat.deleteOne({toID, fromID}), Chat.deleteOne({
+    toID: fromID,
+    fromID: toID
+})]
 const getImage = async id => {
     try {
         const blob = await BlobServiceClient.fromConnectionString(process.env.AZURE_BLOBSTORAGE_CONNECTION_STRING)
@@ -212,14 +216,16 @@ router.post("/toggleFriend", authorize, async (req, res) => {
         let friendIndex = sender.friends.indexOf(req.body._id);
         if (friendIndex === -1) {
             sender.friends.push(req.body._id);
+            console.log(new Chat({toID: req.body._id, fromID: decoded.id}).save());
             sender.save();
         } else {
             sender.friends.splice(friendIndex, 1);
+            console.log(await removeChatID(decoded.id, req.body._id));
             sender.save();
         }
-        res.status(200).json({friendStatus: friendIndex === -1 ? "Sent request" : "Removed friend"})
+        return res.status(200).json({friendStatus: friendIndex === -1 ? "Sent request" : "Removed friend"})
     } catch (e) {
-        res.status(500).json({error: "Internal server error", stack: e})
+        return res.status(500).json({error: "Internal server error", stack: e})
     }
 
 })

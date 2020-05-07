@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const passport = require("passport");
 const users = require("./Routes/users");
+const chats = require("./Routes/chats");
 const comments = require("./Routes/comments")
 const cors = require('cors')
 require('dotenv').config();
@@ -26,6 +27,7 @@ require("./auth/passport")(passport);
 
 app.use("/api/users", users);
 app.use("/api/comments", comments);
+app.use("/api/chats", chats);
 
 
 const PORT = process.env.PORT || 8000;
